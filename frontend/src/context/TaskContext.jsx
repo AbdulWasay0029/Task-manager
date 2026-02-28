@@ -1,7 +1,8 @@
-
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { io } from "socket.io-client";
+import AuthContext from "./AuthContext";
 
 const TaskContext = createContext();
 
@@ -10,7 +11,38 @@ export const TaskProvider = ({ children }) => {
     const [assignedTasks, setAssignedTasks] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
 
+    // We need the user to join the socket room
+    const { user } = useContext(AuthContext);
+
     const API_URL = "http://localhost:5000/api/tasks";
+    const SOCKET_URL = "http://localhost:5000";
+
+    // Initialize Socket.io
+    useEffect(() => {
+        if (!user) return;
+
+        const socket = io(SOCKET_URL);
+
+        // Join room
+        socket.emit("join", user._id);
+
+        // Listen for new tasks assigned to this user
+        socket.on("task-assigned", (newTask) => {
+            setAssignedTasks((prevTasks) => [...prevTasks, newTask]);
+            toast.info(`New task assigned to you: ${newTask.title}`);
+        });
+
+        // Listen for updates on tasks
+        socket.on("task-updated", (updatedTask) => {
+            setTasks((prevTasks) => prevTasks.map((t) => (t._id === updatedTask._id ? updatedTask : t)));
+            setAssignedTasks((prevTasks) => prevTasks.map((t) => (t._id === updatedTask._id ? updatedTask : t)));
+            toast.info(`Task "${updatedTask.title}" was updated.`);
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, [user]);
 
     // Get token helper
     const getToken = () => {
@@ -29,7 +61,7 @@ export const TaskProvider = ({ children }) => {
             const { data } = await axios.get(`${API_URL}/my`, getToken());
             setTasks(data);
         } catch (error) {
-            toast.error(error.response?.data?.message || "Error fetching tasks");
+            console.error("Error fetching tasks", error);
         }
         setIsLoading(false);
     };
@@ -41,7 +73,7 @@ export const TaskProvider = ({ children }) => {
             const { data } = await axios.get(`${API_URL}/assigned`, getToken());
             setAssignedTasks(data);
         } catch (error) {
-            toast.error(error.response?.data?.message || "Error fetching assigned tasks");
+            console.error("Error fetching assigned tasks", error);
         }
         setIsLoading(false);
     };
@@ -57,8 +89,9 @@ export const TaskProvider = ({ children }) => {
         } catch (error) {
             toast.error(error.response?.data?.message || "Error creating task");
             return false;
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     };
 
     // Delete Task
@@ -79,7 +112,7 @@ export const TaskProvider = ({ children }) => {
         try {
             const { data } = await axios.put(`${API_URL}/toggle/${task._id}`, {}, getToken());
 
-            // Update in both lists if present
+            // Update local state (socket might also update it, but local update is faster for the clicker)
             setTasks(tasks.map((t) => (t._id === task._id ? data : t)));
             setAssignedTasks(assignedTasks.map((t) => (t._id === task._id ? data : t)));
 

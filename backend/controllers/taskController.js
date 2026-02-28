@@ -56,6 +56,11 @@ const createTask = async (req, res) => {
             assignedTo: assignedToId,
         });
 
+        // Emit real-time creation event via Socket.io
+        if (assignedToId) {
+            req.io.to(assignedToId.toString()).emit('task-assigned', task);
+        }
+
         res.status(201).json(task);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -133,6 +138,14 @@ const toggleTaskStatus = async (req, res) => {
 
         task.status = task.status === 'completed' ? 'pending' : 'completed';
         await task.save();
+
+        // Emit real-time update event
+        if (task.assignedTo) {
+            req.io.to(task.assignedTo.toString()).emit('task-updated', task);
+        }
+        if (task.createdBy.toString() !== req.user.id) {
+            req.io.to(task.createdBy.toString()).emit('task-updated', task);
+        }
 
         res.status(200).json(task);
     } catch (error) {
