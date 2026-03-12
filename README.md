@@ -1,40 +1,97 @@
+# Task Manager — Backend API
 
-# 📋 TaskFlow - A Task Management App
+REST API for a collaborative task management system. Handles user authentication, task CRUD, and cross-user task assignment.
 
-Your complete internship project submission is ready!
+---
 
-## 🚀 Features
+## Features
 
-*   **User Authentication**: JWT-based login/registration.
-*   **Task Management**: Create, Read, Update, Delete (CRUD).
-*   **Collaboration**: Assign tasks to other users by email.
-*   **Status Tracking**: Mark tasks as pending/completed.
-*   **Dashboard**: View "My Tasks" and "Assigned Tasks" separately.
+- JWT-based authentication with protected routes
+- Full CRUD for tasks (create, read, update, delete)
+- Assign tasks to other users by email
+- Status tracking: `pending` / `completed`
+- Separate views for own tasks vs. assigned tasks
 
-## 🛠 Tech Stack
+---
 
-*   **Frontend**: React (Vite) + TailwindCSS
-*   **Backend**: Node.js + Express
-*   **Database**: MongoDB (Mongoose)
+## Stack
 
-## 🏃 How to Run (Local Demo)
+**Node.js · Express.js · MongoDB (Mongoose) · JWT · bcryptjs**
 
-1.  **Start Backend**:
-    ```bash
-    cd backend
-    npm run dev
-    ```
-2.  **Start Frontend**:
-    ```bash
-    cd frontend
-    npm run dev
-    ```
-3.  Open browser at `http://localhost:5173`
+Frontend (separate): React + Vite + TailwindCSS
 
-## 📦 Deployment
+---
 
-See `DEPLOYMENT_GUIDE.md` for instructions on how to put this live on Vercel & Render.
+## API Reference
 
-## 📚 Learning Resources
+### Auth
+```
+POST   /api/auth/register     Create account
+POST   /api/auth/login        Get JWT token
+GET    /api/auth/me           Current user (auth required)
+```
 
-Check `LEARNING_GUIDE.md` for a step-by-step breakdown of how this code works.
+### Tasks
+```
+GET    /api/tasks             All tasks owned by current user
+POST   /api/tasks             Create task
+PUT    /api/tasks/:id         Update task (title, status, assignee)
+DELETE /api/tasks/:id         Delete task
+GET    /api/tasks/assigned    Tasks assigned to current user
+```
+
+---
+
+## Setup
+
+```bash
+# Backend
+cd backend
+npm install
+npm run dev
+
+# Frontend
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`
+
+Configure `.env` in `/backend`:
+```env
+MONGO_URI=mongodb://localhost:27017/taskmanager
+JWT_SECRET=your-secret-key
+PORT=5000
+```
+
+---
+
+## Project Structure
+
+```
+├── backend/
+│   ├── models/
+│   │   ├── User.js
+│   │   └── Task.js
+│   ├── routes/
+│   │   ├── auth.js
+│   │   └── tasks.js
+│   ├── middleware/
+│   │   └── auth.js           # JWT verification
+│   └── server.js
+└── frontend/
+    ├── src/
+    │   ├── components/
+    │   └── App.jsx
+    └── vite.config.js
+```
+
+---
+
+## Security
+
+- Passwords hashed with bcrypt
+- JWT expiry enforced on all protected routes
+- Users can only modify their own tasks
+- Input validated before DB writes
